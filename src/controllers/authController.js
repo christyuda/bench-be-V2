@@ -1,39 +1,59 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const Token = require('../models/Token'); // Model for tracking tokens
+const Token = require('../models/Token'); 
 
 
 exports.register = async (req, res) => {
-  const { fullName, username, email, password } = req.body;
+  const { fullName, username, email, password, role = 'user' } = req.body;
 
   try {
-    let user = await User.findOne({ email });
-    if (user) {
+    // Check if the email is already used
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
       return res.status(409).json({ message: "Email already in use" });
     }
 
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    user = new User({
+    // Create a new user with the role
+    const newUser = new User({
       fullName,
       username,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      role,
+      isActive: true
     });
 
-    await user.save();
+    await newUser.save();
 
     res.status(201).json({
       message: 'User registered successfully',
       data: {
-        id: user._id,
-        username: user.username,
-        email: user.email
+        id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        isActive: newUser.isActive
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to register user', error: error.message });
+    // Handle MongoDB duplicate key errors separately
+    if (error.name === 'MongoError' && error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists. Please use a different ${field}.`;
+      return res.status(409).json({
+        message: message
+      });
+    }
+
+    // General error handling
+    res.status(500).json({
+      message: 'Failed to register user',
+      error: error.message
+    });
   }
 };
 
@@ -63,7 +83,7 @@ exports.login = async (req, res) => {
         fullName: user.fullName,
         username: user.username
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_KEY_SECRET,
       { expiresIn: '24h' }
     );
 
