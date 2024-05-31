@@ -11,9 +11,11 @@ connectDB();
 
 // Import routes
 const userRoutes = require('./src/routes/authRoutes');
+const benchmarkRoutes = require('./src/routes/benchmarkRoutes');
 
 // Use routes
 app.use('/api/auth', userRoutes);
+app.use('/api/benchmark', benchmarkRoutes);
 
 // Handle 404 - Not Found
 app.use((req, res, next) => {
