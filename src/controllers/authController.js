@@ -30,6 +30,8 @@ exports.register = async (req, res) => {
     await newUser.save();
 
     res.status(201).json({
+
+      status: 201,
       message: 'User registered successfully',
       data: {
         id: newUser._id,
@@ -64,16 +66,26 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({ message: 'Authentication failed: User not found' });
+      return res.status(401).json({ 
+        status: 401,
+        message: 'Autentikasi gagal: Pengguna tidak ditemukan',
+        error: 'Email atau password tidak valid'
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Authentication failed: Incorrect password' });
+      return res.status(401).json({ 
+        status: 401,
+        message: 'Autentikasi gagal: Password salah',
+        error: 'Email atau password tidak valid'
+      });
     }
 
     if (!user.isActive) {
-      return res.status(403).json({ message: 'Account is not active, please contact administrator' });
+      return res.status(403).json({
+        status: 403, 
+        message: 'Account is not active, please contact administrator' });
     }
 
     const token = jwt.sign(

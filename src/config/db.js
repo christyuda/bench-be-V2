@@ -4,8 +4,7 @@ function connectDB() {
     const dbURI = process.env.MONGO_BENCHMARK;
     const options = {
       useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 20000
+     
     };
 
     console.log('Attempting to connect to MongoDB...');
