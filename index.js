@@ -1,7 +1,7 @@
-require('dotenv').config();
-const express = require('express');
-const connectDB = require('./src/config/db');
-const cors = require('cors');
+require("dotenv").config();
+const express = require("express");
+const connectDB = require("./src/config/db");
+const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(cors());
@@ -11,9 +11,11 @@ app.use(express.json());
 connectDB();
 
 // Import routes
-const userRoutes = require('./src/routes/authRoutes');
-const benchmarkRoutes = require('./src/routes/benchmarkRoutes');
-app.get('/', (req, res) => {
+const userRoutes = require("./src/routes/authRoutes");
+const benchmarkRoutes = require("./src/routes/benchmarkRoutes");
+const libraryRoutes = require("./src/routes/libraryRoutes");
+
+app.get("/", (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html lang="en">
@@ -85,22 +87,23 @@ app.get('/', (req, res) => {
 });
 
 // Use routes
-app.use('/api/auth', userRoutes);
-app.use('/api/benchmark', benchmarkRoutes);
+app.use("/api/auth", userRoutes);
+app.use("/api/benchmark", benchmarkRoutes);
+app.use("/api/libraryjs", libraryRoutes);
 
 // Handle 404 - Not Found
 app.use((req, res, next) => {
-  res.status(404).send('Sorry, that route does not exist.');
+  res.status(404).send("Sorry, that route does not exist.");
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send('Something broke!');
+  res.status(500).send("Something broke!");
 });
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log('JWT Key:', process.env.JWT_KEY_SECRET);
+  console.log("JWT Key:", process.env.JWT_KEY_SECRET);
 });
