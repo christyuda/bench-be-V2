@@ -6,53 +6,64 @@ const OptimizationBenchmark = require('../models/OptimizationBenchmark');
 
 
 const { performance } = require('perf_hooks');
-
 exports.startBenchmark = async (req, res) => {
   try {
-    const { testType, testCode, testConfig } = req.body;
+    const { testType, testCodes, testConfig, javascriptType } = req.body;
 
-    if (!testType || !testCode || !testConfig) {
-      return res.status(400).json({ success: false, error: "Harap berikan testType, testCode, dan testConfig." });
+    if (!testType || !testCodes || !testConfig || !javascriptType) {
+      return res.status(400).json({ success: false, error: "Please provide all required fields: testType, testCodes, testConfig, and javascriptType." });
     }
 
-    const iterations = testConfig.iterations || 1;
+    const results = testCodes.map((code, index) => {
+      let iterationsResults = [];
 
-    const results = [];
+      for (let i = 0; i < testConfig.iterations; i++) {
+        const startTime = performance.now();
+        eval(code);
+        const endTime = performance.now();
+        const executionTime = endTime - startTime;
+        
+        iterationsResults.push({
+          iteration: i + 1,
+          executionTime: `${executionTime.toFixed(2)} ms`
+        });
+      }
 
-    for (let i = 0; i < iterations; i++) {
-      const startTime = performance.now();
-      eval(testCode); 
-      const endTime = performance.now();
+      const averageExecutionTime = iterationsResults.reduce((acc, curr) => acc + parseFloat(curr.executionTime), 0) / testConfig.iterations;
 
-      const executionTime = endTime - startTime;
-
-      results.push(executionTime);
-    }
-
-    const averageExecutionTime = results.reduce((total, current) => total + current, 0) / results.length;
-    const totalAverage = `${averageExecutionTime.toFixed(2)} ms`;
-
-    const benchmark = await Benchmark.create({
-      testType,
-      testCode,
-      testConfig,
-      results,
-      averageExecutionTime,
-      totalAverage 
+      return {
+        testCodeNumber: index + 1, // adding a test code number for clarity
+        testCode: code,
+        iterationsResults: iterationsResults,
+        averageExecutionTime: `${averageExecutionTime.toFixed(2)} ms`
+      };
     });
 
-    res.status(201).json({ success: true, message: `Rata-rata execution time dari ${iterations} iterasi: ${totalAverage}`, data: benchmark });
+    const overallAverage = results.reduce((acc, curr) => acc + parseFloat(curr.averageExecutionTime), 0) / results.length;
+
+    const benchmark = await Benchmark.create({
+      javascriptType,
+      testType,
+      testConfig,
+      results,
+      overallAverage: `${overallAverage.toFixed(2)} ms`
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Rata-rata execution time dari ${testConfig.iterations} iterasi: ${overallAverage.toFixed(2)} ms`,
+      data: benchmark
+    });
   } catch (error) {
+    console.error('Error during benchmark execution:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
-
-
 exports.startMemoryBenchmark = async (req, res) => {
     try {
-        const { testType, testCode, testConfig } = req.body;
+        const { testType, testCode, testConfig,javascriptType } = req.body;
       
-        if (!testType || !testCode || !testConfig) {
+        if (!testType || !testCode || !testConfig || !javascriptType) {
             return res.status(400).json({ success: false, error: "Harap berikan testType, testCode, dan testConfig." });
         }
   
@@ -73,6 +84,7 @@ exports.startMemoryBenchmark = async (req, res) => {
         const totalAverageMemoryUsage = averageMemoryUsage * iterations;
 
         const benchmark = await MemoryBenchmark.create({
+            javascriptType,
             testType,
             testCode,
             testConfig,
@@ -93,10 +105,10 @@ exports.startMemoryBenchmark = async (req, res) => {
 
 exports.startPageLoadBenchmark = async (req, res) => {
     try {
-        const { testType, testCode, testConfig } = req.body;
+        const { testType, testCode, testConfig, javascriptType } = req.body;
 
 
-        if (!testType || !testCode || !testConfig) {
+        if (!testType || !testCode || !testConfig || !javascriptType) {
             return res.status(400).json({ success: false, error: "Harap berikan testType, testCode, dan testConfig." });
         }
 
@@ -122,6 +134,7 @@ exports.startPageLoadBenchmark = async (req, res) => {
 
         // Simpan hasil benchmark ke dalam database
         const pageLoadBenchmark = await PageLoadBenchmark.create({
+            javascriptType,
             testType,
             testCode,
             testConfig,
@@ -139,9 +152,9 @@ exports.startPageLoadBenchmark = async (req, res) => {
 };
 exports.startAsyncPerformanceBenchmark = async (req, res) => {
     try {
-        const { testType, testCode, testConfig } = req.body;
+        const { testType, testCode, testConfig,javascriptType } = req.body;
       
-        if (!testType || !testCode || !testConfig) {
+        if (!testType || !testCode || !testConfig || !javascriptType) {
             return res.status(400).json({ success: false, error: "Harap berikan testType, testCode, dan testConfig." });
         }
   
@@ -161,6 +174,7 @@ exports.startAsyncPerformanceBenchmark = async (req, res) => {
         const averageAsyncExecution = results.reduce((total, current) => total + current, 0) / results.length;
         const totalAverageAsyncExecution = iterations * averageAsyncExecution;
         const benchmark = await AsyncPerformanceBenchmark.create({
+            javascriptType,
             testType,
             testCode,
             testConfig,
@@ -181,9 +195,9 @@ exports.startAsyncPerformanceBenchmark = async (req, res) => {
 
 exports.startOptimizationBenchmark = async (req, res) => {
   try {
-    const { optimizationTechnique, testCodeBefore, testCodeAfter, testConfig } = req.body;
+    const { optimizationTechnique, testCodeBefore, testCodeAfter, testConfig, javascriptType } = req.body;
 
-    if (!optimizationTechnique || !testCodeBefore || !testCodeAfter || !testConfig) {
+    if (!optimizationTechnique || !testCodeBefore || !testCodeAfter || !testConfig, javascriptType) {
       return res.status(400).json({ success: false, error: "Harap berikan teknik optimisasi, kode uji sebelum, kode uji setelah, dan konfigurasi uji." });
     }
 
@@ -211,6 +225,7 @@ exports.startOptimizationBenchmark = async (req, res) => {
     const averageExecutionTimeAfter = resultsAfter.reduce((total, current) => total + current, 0) / resultsAfter.length;
 
     const optimizationBenchmark = await OptimizationBenchmark.create({
+      javascriptType,
       optimizationTechnique,
       testCodeBefore,
       testCodeAfter,

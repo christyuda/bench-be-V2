@@ -27,6 +27,10 @@ const AsyncPerformanceBenchmarkSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  javascriptType: {  
+    type: String,
+    required: true
+  },
 });
 
 const AsyncPerformanceBenchmark = mongoose.model('AsyncPerformanceBenchmark', AsyncPerformanceBenchmarkSchema);

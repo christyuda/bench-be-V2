@@ -1,12 +1,13 @@
 const mongoose = require('mongoose');
 
 const BenchmarkSchema = new mongoose.Schema({
+  
   testType: {
     type: String,
     required: true,
   },
   testCode: {
-    type: String,
+    type: [String],
     required: true,
   },
   testConfig: {
@@ -22,6 +23,10 @@ const BenchmarkSchema = new mongoose.Schema({
   },
   totalAverage: {
     type: String,
+  },
+  javascriptType: {  
+    type: String,
+    required: true
   },
   timestamp: {
     type: Date,

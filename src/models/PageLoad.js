@@ -27,6 +27,10 @@ const PageLoadBenchmarkSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  javascriptType: {  
+    type: String,
+    required: true
+  },
 });
 
 const PageLoadBenchmark = mongoose.model('PageLoadBenchmark', PageLoadBenchmarkSchema);

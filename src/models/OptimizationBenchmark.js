@@ -35,6 +35,10 @@ const OptimizationBenchmarkSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  javascriptType: {  
+    type: String,
+    required: true
+  },
 });
 
 const OptimizationBenchmark = mongoose.model('OptimizationBenchmark', OptimizationBenchmarkSchema);

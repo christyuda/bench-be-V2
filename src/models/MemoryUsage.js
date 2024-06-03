@@ -27,6 +27,10 @@ const MemoryBenchmarkSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  javascriptType: {  
+    type: String,
+    required: true
+  },
 });
 
 const MemoryBenchmark = mongoose.model('MemoryBenchmark', MemoryBenchmarkSchema);
