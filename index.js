@@ -16,6 +16,8 @@ const benchmarkRoutes = require("./src/routes/benchmarkRoutes");
 const libraryRoutes = require("./src/routes/libraryRoutes");
 const javaScriptTypeRoutes = require("./src/routes/javaScriptTypeRoutes");
 const getAllJavaScriptTypes = require("./src/routes/libraryController");
+const getAllJavascriptuser = require("./src/routes/countJavascriptRoutes");
+
 
 app.get("/", (req, res) => {
   res.send(`
@@ -94,6 +96,7 @@ app.use("/api/benchmark", benchmarkRoutes);
 app.use("/api/libraryjs", libraryRoutes);
 app.use("/api/typesjs", javaScriptTypeRoutes);
 app.use("/api/all-js", getAllJavaScriptTypes);
+app.use("/api/count-js", getAllJavascriptuser);
 
 
 

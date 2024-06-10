@@ -60,138 +60,165 @@ exports.startBenchmark = async (req, res) => {
   }
 };
 exports.startMemoryBenchmark = async (req, res) => {
-    try {
-        const { testType, testCode, testConfig,javascriptType } = req.body;
-      
-        if (!testType || !testCode || !testConfig || !javascriptType) {
-            return res.status(400).json({ success: false, error: "Harap berikan testType, testCode, dan testConfig." });
-        }
-  
-        const iterations = testConfig.iterations || 1;
-  
-        const results = [];
-  
-        for (let i = 0; i < iterations; i++) {
-            const used = process.memoryUsage().heapUsed / 1024 / 1024; 
-            eval(testCode); 
-            const newUsed = process.memoryUsage().heapUsed / 1024 / 1024; 
-            const memoryUsage = newUsed - used; 
-        
-            results.push(memoryUsage);
-        }
-  
-        const averageMemoryUsage = results.reduce((total, current) => total + current, 0) / results.length;
-        const totalAverageMemoryUsage = averageMemoryUsage * iterations;
+  try {
+      const { testType, testCodes, testConfig, javascriptType } = req.body;
 
-        const benchmark = await MemoryBenchmark.create({
-            javascriptType,
-            testType,
-            testCode,
-            testConfig,
-            results,
-            averageMemoryUsage,
-            totalAverageMemoryUsage
+      if (!testType || !testCodes || !testConfig || !javascriptType) {
+          return res.status(400).json({
+              success: false,
+              error: "Please provide all required fields: testType, testCodes, testConfig, and javascriptType."
+          });
+      }
 
-        });
-  
-        const message = `Rata-rata penggunaan memori dari ${iterations} iterasi: ${averageMemoryUsage.toFixed(2)} MB`;
-  
-        res.status(201).json({ success: true, message, data: benchmark });
-    } catch (error) {
-        // Tangani kesalahan
-        res.status(500).json({ success: false, error: error.message });
-    }
+      const results = testCodes.map((code, index) => {
+          let iterationsResults = [];
+          for (let i = 0; i < testConfig.iterations; i++) {
+              const used = process.memoryUsage().heapUsed / 1024 / 1024;
+              eval(code);
+              const newUsed = process.memoryUsage().heapUsed / 1024 / 1024;
+              const memoryUsage = newUsed - used;
+
+              iterationsResults.push({
+                  iteration: i + 1,
+                  memoryUsage: `${memoryUsage.toFixed(2)} MB`
+              });
+          }
+
+          const averageMemoryUsage = iterationsResults.reduce((acc, curr) => acc + parseFloat(curr.memoryUsage), 0) / testConfig.iterations;
+
+          return {
+              testCodeNumber: index + 1,
+              testCode: code,
+              iterationsResults: iterationsResults,
+              averageMemoryUsage: `${averageMemoryUsage.toFixed(2)} MB`
+          };
+      });
+
+      const overallAverageMemoryUsage = results.reduce((acc, curr) => acc + parseFloat(curr.averageMemoryUsage), 0) / results.length;
+
+      const benchmark = await MemoryBenchmark.create({
+          javascriptType,
+          testType,
+          testConfig,
+          results,
+          overallAverageMemoryUsage: `${overallAverageMemoryUsage.toFixed(2)} MB`
+      });
+
+      res.status(201).json({
+          success: true,
+          message: `Rata-rata penggunaan memori dari ${testConfig.iterations} iterasi: ${overallAverageMemoryUsage.toFixed(2)} MB`,
+          data: benchmark
+      });
+  } catch (error) {
+      console.error('Error during memory benchmark execution:', error);
+      res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 exports.startPageLoadBenchmark = async (req, res) => {
-    try {
-        const { testType, testCode, testConfig, javascriptType } = req.body;
+  try {
+      const { testType, testCodes, testConfig, javascriptType } = req.body;
 
+      if (!testType || !testCodes || !testConfig || !javascriptType) {
+          return res.status(400).json({ success: false, error: "Please provide all required fields: testType, testCodes, testConfig, and javascriptType." });
+      }
 
-        if (!testType || !testCode || !testConfig || !javascriptType) {
-            return res.status(400).json({ success: false, error: "Harap berikan testType, testCode, dan testConfig." });
-        }
+      const results = testCodes.map((code, index) => {
+          let iterationsResults = [];
+          for (let i = 0; i < testConfig.iterations; i++) {
+              const start = performance.now();
+              eval(code);
+              const end = performance.now();
+              const pageLoadTime = end - start;
 
-        const iterations = testConfig.iterations || 1;
+              iterationsResults.push({
+                  iteration: i + 1,
+                  pageLoadTime: `${pageLoadTime.toFixed(2)} ms`
+              });
+          }
 
-        const results = [];
+          const averagePageLoadTime = iterationsResults.reduce((acc, curr) => acc + parseFloat(curr.pageLoadTime), 0) / testConfig.iterations;
 
-        for (let i = 0; i < iterations; i++) {
+          return {
+              testCodeNumber: index + 1,
+              testCode: code,
+              iterationsResults: iterationsResults,
+              averagePageLoadTime: `${averagePageLoadTime.toFixed(2)} ms`
+          };
+      });
 
-            const start = performance.now();
-            eval(testCode);
-            const end = performance.now();
+      const overallAveragePageLoadTime = results.reduce((acc, curr) => acc + parseFloat(curr.averagePageLoadTime), 0) / results.length;
 
+      const pageLoadBenchmark = await PageLoadBenchmark.create({
+          javascriptType,
+          testType,
+          testConfig,
+          results,
+          overallAveragePageLoadTime: `${overallAveragePageLoadTime.toFixed(2)} ms`
+      });
 
-            const pageLoadTime = end - start;
-
-            results.push(pageLoadTime);
-        }
-
-        const averagePageLoadTime = results.reduce((total, current) => total + current, 0) / results.length;
-        const totalAveragePageLoadTime = averagePageLoadTime * iterations;
-
-
-        // Simpan hasil benchmark ke dalam database
-        const pageLoadBenchmark = await PageLoadBenchmark.create({
-            javascriptType,
-            testType,
-            testCode,
-            testConfig,
-            results,
-            averagePageLoadTime,
-            totalAveragePageLoadTime
-        });
-
-        // Kirim respons berhasil bersama dengan data benchmark yang disimpan
-        res.status(201).json({ success: true, data: pageLoadBenchmark });
-    } catch (error) {
-        // Tangani kesalahan
-        res.status(500).json({ success: false, error: error.message });
-    }
+      res.status(201).json({
+          success: true,
+          message: `Rata-rata page load time dari ${testConfig.iterations} iterasi: ${overallAveragePageLoadTime.toFixed(2)} ms`,
+          data: pageLoadBenchmark
+      });
+  } catch (error) {
+      console.error('Error during page load benchmark execution:', error);
+      res.status(500).json({ success: false, error: error.message });
+  }
 };
 exports.startAsyncPerformanceBenchmark = async (req, res) => {
-    try {
-        const { testType, testCode, testConfig,javascriptType } = req.body;
-      
-        if (!testType || !testCode || !testConfig || !javascriptType) {
-            return res.status(400).json({ success: false, error: "Harap berikan testType, testCode, dan testConfig." });
-        }
-  
-        const iterations = testConfig.iterations || 1;
-  
-        const results = [];
-  
-        for (let i = 0; i < iterations; i++) {
-            const startTime = Date.now();
-            await eval(testCode); 
-            const endTime = Date.now(); 
-            const executionTime = endTime - startTime;
-        
-            results.push(executionTime);
-        }
-  
-        const averageAsyncExecution = results.reduce((total, current) => total + current, 0) / results.length;
-        const totalAverageAsyncExecution = iterations * averageAsyncExecution;
-        const benchmark = await AsyncPerformanceBenchmark.create({
-            javascriptType,
-            testType,
-            testCode,
-            testConfig,
-            results,
-            averageAsyncExecution,
-            totalAverageAsyncExecution
-        });
-  
-        const message = `Rata-rata waktu eksekusi dari ${iterations} iterasi: ${averageAsyncExecution} ms`;
-  
-        res.status(201).json({ success: true, message, data: benchmark });
-    } catch (error) {
-        // Tangani kesalahan
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
+  try {
+      const { testType, testCodes, testConfig, javascriptType } = req.body;
 
+      if (!testType || !testCodes || !testConfig || !javascriptType) {
+          return res.status(400).json({ success: false, error: "Please provide all required fields: testType, testCodes, testConfig, and javascriptType." });
+      }
+
+      const results = await Promise.all(testCodes.map(async (code, index) => {
+          let iterationsResults = [];
+          for (let i = 0; i < testConfig.iterations; i++) {
+              const startTime = Date.now();
+              await eval(code); // Assumption: code is asynchronous
+              const endTime = Date.now();
+              const executionTime = endTime - startTime;
+
+              iterationsResults.push({
+                  iteration: i + 1,
+                  executionTime: executionTime
+              });
+          }
+
+          const averageAsyncExecution = iterationsResults.reduce((acc, curr) => acc + curr.executionTime, 0) / testConfig.iterations;
+
+          return {
+              testCodeNumber: index + 1,
+              testCode: code,
+              iterationsResults: iterationsResults,
+              averageAsyncExecution: averageAsyncExecution
+          };
+      }));
+
+      const overallAverageAsyncExecution = results.reduce((acc, curr) => acc + curr.averageAsyncExecution, 0) / results.length;
+
+      const benchmark = await AsyncPerformanceBenchmark.create({
+          javascriptType,
+          testType,
+          testConfig,
+          results,
+          overallAverageAsyncExecution
+      });
+
+      res.status(201).json({
+          success: true,
+          message: `Rata-rata waktu eksekusi dari ${testConfig.iterations} iterasi: ${overallAverageAsyncExecution.toFixed(2)} ms`,
+          data: benchmark
+      });
+  } catch (error) {
+      console.error('Error during asynchronous performance benchmark execution:', error);
+      res.status(500).json({ success: false, error: error.message });
+  }
+};
 
 exports.startOptimizationBenchmark = async (req, res) => {
   try {

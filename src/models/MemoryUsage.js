@@ -6,7 +6,7 @@ const MemoryBenchmarkSchema = new mongoose.Schema({
     required: true,
   },
   testCode: {
-    type: String,
+    type: [String],
     required: true,
   },
   testConfig: {
