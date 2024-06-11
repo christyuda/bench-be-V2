@@ -3,8 +3,9 @@ const PageLoadBenchmark = require('../models/PageLoad');
 const MemoryBenchmark = require('../models/MemoryUsage');
 const AsyncPerformanceBenchmark = require('../models/AsyncPerformanceBenchmark');
 const OptimizationBenchmark = require('../models/OptimizationBenchmark');
-
-
+const os = require('os');
+const si = require('systeminformation');
+const escomplex = require('escomplex');
 const { performance } = require('perf_hooks');
 exports.startBenchmark = async (req, res) => {
   try {
@@ -16,7 +17,13 @@ exports.startBenchmark = async (req, res) => {
 
     const results = testCodes.map((code, index) => {
       let iterationsResults = [];
-
+      let complexityReport = escomplex.analyse(code, { logicalor: true, switchcase: true });
+      let complexitySummary = {
+        cyclomatic: complexityReport.aggregate.cyclomatic,
+        sloc: complexityReport.aggregate.sloc,
+        halstead: complexityReport.aggregate.halstead,
+        maintainability: complexityReport.aggregate.maintainability
+      };
       for (let i = 0; i < testConfig.iterations; i++) {
         const startTime = performance.now();
         eval(code);
@@ -35,8 +42,8 @@ exports.startBenchmark = async (req, res) => {
         testCodeNumber: index + 1, // adding a test code number for clarity
         testCode: code,
         iterationsResults: iterationsResults,
-        averageExecutionTime: `${averageExecutionTime.toFixed(2)} ms`
-      };
+        averageExecutionTime: `${averageExecutionTime.toFixed(2)} ms`,
+        complexity: complexitySummary      };
     });
 
     const overallAverage = results.reduce((acc, curr) => acc + parseFloat(curr.averageExecutionTime), 0) / results.length;
@@ -48,11 +55,43 @@ exports.startBenchmark = async (req, res) => {
       results,
       overallAverage: `${overallAverage.toFixed(2)} ms`
     });
+    const cpuInfo = os.cpus()[0];
+    const totalMemoryGB = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2);
+    const freeMemoryGB = (os.freemem() / 1024 / 1024 / 1024).toFixed(2);
+    const osInfo = {
+      type: os.type(),
+      platform: os.platform(),
+      release: os.release(),
+      arch: os.arch()
+    };
+
+    // Mendapatkan informasi GPU dan detail lainnya menggunakan systeminformation
+const systemInfo = await si.getStaticData();
+    const hardwareInfo = {
+      os: osInfo,
+      cpu: {
+        model: cpuInfo.model,
+        speed: `${cpuInfo.speed} MHz`
+      },      totalMemory: `${totalMemoryGB} GB`,
+      freeMemory: `${freeMemoryGB} GB`,
+      gpu: systemInfo.graphics.controllers.map(gpu => ({
+        model: gpu.model,
+        vram: gpu.vram ? `${gpu.vram} MB` : 'N/A'
+      })),
+      system: {
+        manufacturer: systemInfo.system.manufacturer,
+        model: systemInfo.system.model,
+        version: systemInfo.system.version
+      }
+    };
+
 
     res.status(201).json({
       success: true,
       message: `Rata-rata execution time dari ${testConfig.iterations} iterasi: ${overallAverage.toFixed(2)} ms`,
-      data: benchmark
+      data: benchmark,
+      hardware: hardwareInfo
+
     });
   } catch (error) {
     console.error('Error during benchmark execution:', error);

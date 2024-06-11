@@ -17,7 +17,7 @@ const libraryRoutes = require("./src/routes/libraryRoutes");
 const javaScriptTypeRoutes = require("./src/routes/javaScriptTypeRoutes");
 const getAllJavaScriptTypes = require("./src/routes/libraryController");
 const getAllJavascriptuser = require("./src/routes/countJavascriptRoutes");
-
+const speedget = require("./src/routes/speedRoutes");
 
 app.get("/", (req, res) => {
   res.send(`
@@ -97,6 +97,7 @@ app.use("/api/libraryjs", libraryRoutes);
 app.use("/api/typesjs", javaScriptTypeRoutes);
 app.use("/api/all-js", getAllJavaScriptTypes);
 app.use("/api/count-js", getAllJavascriptuser);
+app.use("/api/speed-test", speedget);
 
 
 
